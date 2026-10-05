@@ -1,0 +1,40 @@
+name: cleanup
+
+on:
+  pull_request:
+    branches: [master]
+    types: [closed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  cleanup-helios-preview:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        env:
+          SSH_KEY: ${{ secrets.HELIOS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.HELIOS_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Remove preview directory
+        env:
+          HOST: ${{ secrets.HELIOS_HOST }}
+          USER: ${{ secrets.HELIOS_USER }}
+          PORT: ${{ secrets.HELIOS_PORT }}
+          BASE: ${{ secrets.HELIOS_PATH }}
+        run: |
+          PR=${{ github.event.pull_request.number }}
+          ssh -i ~/.ssh/id_ed25519 -p "$PORT" -o IdentitiesOnly=yes \
+            "$USER@$HOST" "rm -rf '$BASE/preview/pr-$PR'"

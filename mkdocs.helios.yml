@@ -1,0 +1,4 @@
+INHERIT: mkdocs.yml
+
+site_url: https://se.ifmo.ru/~s367380/py-site/
+use_directory_urls: true

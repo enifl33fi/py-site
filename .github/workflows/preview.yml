@@ -1,0 +1,54 @@
+name: preview
+
+on:
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    uses: ./.github/workflows/_build.yml
+
+  deploy-helios-preview:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: site-helios
+          path: site
+
+      - name: Setup SSH
+        env:
+          SSH_KEY: ${{ secrets.HELIOS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.HELIOS_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy preview
+        env:
+          HOST: ${{ secrets.HELIOS_HOST }}
+          USER: ${{ secrets.HELIOS_USER }}
+          PORT: ${{ secrets.HELIOS_PORT }}
+          BASE: ${{ secrets.HELIOS_PATH }}
+          URL: ${{ secrets.HELIOS_URL }}
+        run: |
+          PR=${{ github.event.pull_request.number }}
+          SSH_OPTS="-i $HOME/.ssh/id_ed25519 -p $PORT -o IdentitiesOnly=yes"
+          ssh $SSH_OPTS "$USER@$HOST" "mkdir -p '$BASE/preview/pr-$PR'"
+          rsync -az --delete -e "ssh $SSH_OPTS" \
+            site/ "$USER@$HOST:$BASE/preview/pr-$PR/"
+          curl -fsS "$URL/preview/pr-$PR/health.txt" | grep -q "P4_DEPLOY_OK"

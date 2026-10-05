@@ -1,0 +1,58 @@
+name: _build
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: mkdocs build -f mkdocs.github.yml --strict
+      - run: mkdocs build -f mkdocs.helios.yml --strict
+
+  build-github:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: mkdocs build -f mkdocs.github.yml --strict
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site-github
+          path: site
+
+  build-helios:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: mkdocs build -f mkdocs.helios.yml --strict
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site-helios
+          path: site

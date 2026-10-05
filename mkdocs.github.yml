@@ -1,0 +1,4 @@
+INHERIT: mkdocs.yml
+
+site_url: https://enifl33fi.github.io/py-site/
+use_directory_urls: true

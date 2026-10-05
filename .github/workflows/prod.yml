@@ -73,7 +73,7 @@ jobs:
         env:
           URL: ${{ secrets.HELIOS_URL }}
         run: |
-          code=$(curl -s -o /tmp/health.html -w '%{http_code}' "$URL/health.txt")
+          code=$(curl -s -o /tmp/health.html -w '%{http_code}' "$URL/current/health.txt")
           echo "HTTP $code"
           test "$code" = "200"
           grep -q "P4_DEPLOY_OK" /tmp/health.html
